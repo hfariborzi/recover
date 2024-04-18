@@ -151,7 +151,7 @@ def completely_random_matrices(betas, reps, samplesize, threshold_cutoff_base=0.
     return pd.DataFrame(), 0
 
 
-st.title("Correlation Matrix Generator")
+st.title("Correlation Matrix Generator-With Joe's Generator (simulated)")
 
 betas_input = st.text_input("Betas (comma or semicolon separated)", "-0.2, 0.4")
 reps_input = st.number_input("Number of Repetitions", min_value=1, value=500)
