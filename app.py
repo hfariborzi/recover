@@ -28,38 +28,39 @@ def generate_positive_definite_correlation_matrix(n):
     A = eigenvectors @ np.diag(np.abs(np.random.rand(n))) @ eigenvectors.T
     return A
 
-def generate_correlation_matrix(d):
-    # Initialize the correlation matrix with ones on the diagonal
-    R = np.eye(d)
-    
-    # Generate correlations for adjacent indices with values between -1 and 1
-    for i in range(d-1):
-        R[i, i+1] = R[i+1, i] = np.random.uniform(-1, 1)
+def ensure_positive_definite(R):
+    """ Adjust the matrix to ensure it is positive definite """
+    eigenvalues, eigenvectors = np.linalg.eigh(R)
+    min_eigenvalue = eigenvalues.min()
+    if min_eigenvalue <= 0:
+        # Adjust eigenvalues to be positive
+        eigenvalues[eigenvalues <= 0] = 0.01
+    R = np.dot(eigenvectors, np.dot(np.diag(eigenvalues), eigenvectors.T))
+    np.fill_diagonal(R, 1)  # Ensure diagonal is 1
+    return R
 
-    # Method to compute correlations from partial correlations
-    for k in range(2, d):  # Start with elements that are 2 apart
-        for i in range(d-k):
-            j = i + k
-            # Ensuring the partial correlations do not cause invalid correlation values
-            # Calculate partial correlation safely
-            valid = False
-            attempts = 0
-            while not valid and attempts < 100:
+def generate_correlation_matrix(d):
+    max_attempts = 1000
+    for attempt in range(max_attempts):
+        R = np.eye(d)
+        # Fill the first off-diagonal
+        for i in range(d-1):
+            R[i, i+1] = R[i+1, i] = np.random.uniform(-1, 1)
+
+        # Fill remaining off-diagonals
+        for k in range(2, d):
+            for i in range(d-k):
+                j = i + k
                 partial = np.random.uniform(-1, 1)
-                # Calculate potential full correlation
                 potential_correlation = partial * np.sqrt((1 - R[i, j-1]**2) * (1 - R[i+1, j]**2))
-                # Check if this maintains a valid correlation matrix
                 if -1 <= potential_correlation <= 1:
                     R[i, j] = R[j, i] = potential_correlation
-                    valid = True
-                attempts += 1
+        
+        if np.all(np.linalg.eigvals(R) > 0):
+            return R  # Return if positive definite
 
-    # Check if the matrix is positive definite by looking at the eigenvalues
-    if np.all(np.linalg.eigvals(R) > 0):
-        return R
-    else:
-        # Recalculate if the matrix is not positive definite
-        return generate_correlation_matrix(d)
+    # Ensure positive definiteness if failed in attempts
+    return ensure_positive_definite(R)
 
 def lower_tri_index_to_var_pair(index, var_size):
     counter = 0
