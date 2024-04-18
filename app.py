@@ -17,7 +17,7 @@ def completely_random_matrices_ui(betas, reps, sample_size, threshold_cutoff_bas
     df, duration = completely_random_matrices(betas, reps, sample_size, threshold_cutoff_base)  # Ensure df is returned here
     end_time = time.perf_counter()
     duration = end_time - start_time
-    return df, f"The calculations were done in {duration:.6f} seconds."  # Make sure df is included in return
+    return df, f"The calculations were done in {duration:.3f} seconds."  # Make sure df is included in return
 
 
 def generate_positive_definite_correlation_matrix(n):
@@ -27,6 +27,39 @@ def generate_positive_definite_correlation_matrix(n):
     _, eigenvectors = np.linalg.eigh(A)
     A = eigenvectors @ np.diag(np.abs(np.random.rand(n))) @ eigenvectors.T
     return A
+
+def generate_correlation_matrix(d):
+    # Initialize the correlation matrix with ones on the diagonal
+    R = np.eye(d)
+    
+    # Generate correlations for adjacent indices with values between -1 and 1
+    for i in range(d-1):
+        R[i, i+1] = R[i+1, i] = np.random.uniform(-1, 1)
+
+    # Method to compute correlations from partial correlations
+    for k in range(2, d):  # Start with elements that are 2 apart
+        for i in range(d-k):
+            j = i + k
+            # Ensuring the partial correlations do not cause invalid correlation values
+            # Calculate partial correlation safely
+            valid = False
+            attempts = 0
+            while not valid and attempts < 100:
+                partial = np.random.uniform(-1, 1)
+                # Calculate potential full correlation
+                potential_correlation = partial * np.sqrt((1 - R[i, j-1]**2) * (1 - R[i+1, j]**2))
+                # Check if this maintains a valid correlation matrix
+                if -1 <= potential_correlation <= 1:
+                    R[i, j] = R[j, i] = potential_correlation
+                    valid = True
+                attempts += 1
+
+    # Check if the matrix is positive definite by looking at the eigenvalues
+    if np.all(np.linalg.eigvals(R) > 0):
+        return R
+    else:
+        # Recalculate if the matrix is not positive definite
+        return generate_correlation_matrix(d)
 
 def lower_tri_index_to_var_pair(index, var_size):
     counter = 0
@@ -46,7 +79,7 @@ def completely_random_matrices(betas, reps, samplesize, threshold_cutoff_base=0.
     number_cases = 0
 
     while successful_reps < reps:
-        random_cor_matrix = generate_positive_definite_correlation_matrix(n)
+        random_cor_matrix = generate_correlation_matrix(n)
         corr_matrix = np.dot(np.array(betas), random_cor_matrix).flatten()
         new_matrix1 = np.vstack((corr_matrix, random_cor_matrix))
         first_column = np.vstack([np.array([[1]]), corr_matrix.reshape(-1, 1)])
@@ -106,8 +139,8 @@ def completely_random_matrices(betas, reps, samplesize, threshold_cutoff_base=0.
         mat1 = np.full((var_size, var_size), np.nan)
         np.fill_diagonal(mat1, np.nan)
         tri_indices = np.tril_indices(var_size, -1)
-        mat1[tri_indices] = cor_output[:len(tri_indices[0])]
-        mat1[tri_indices[1], tri_indices[0]] = n_output[:len(tri_indices[0])]  # Transposed indices for upper triangle
+        mat1[tri_indices] = np.round(cor_output[:len(tri_indices[0])], 3)
+        mat1[tri_indices[1], tri_indices[0]] = np.round(n_output[:len(tri_indices[0])], 3)  # Transposed indices for upper triangle
 
         var_names = [f"Var{i+1}" for i in range(var_size)]
         df = pd.DataFrame(mat1, index=var_names, columns=var_names)
