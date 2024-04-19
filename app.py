@@ -157,7 +157,7 @@ st.title("Correlation Matrix Generator-With Joe's Generator (simulated)")
 betas_input = st.text_input("Betas (comma or semicolon separated)", "-0.2, 0.4")
 reps_input = st.number_input("Number of Repetitions", min_value=1, value=500)
 sample_size_input = st.number_input("Sample Size", min_value=1, value=200)
-threshold_input = st.number_input("Threshold Cut-off", min_value=0.0001, max_value=1.0, value=0.001)
+threshold_input = st.number_input("Threshold Cut-off", min_value=0.0001, max_value=1.0, value=0.001, format="%.4f", step=None )
 
 if st.button("Run"):
     df, duration_message = completely_random_matrices_ui(betas_input, reps_input, sample_size_input, threshold_input)
